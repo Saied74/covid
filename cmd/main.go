@@ -5,11 +5,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -28,6 +30,7 @@ var states []string
 var outputFileName string
 var interimFile = make(map[string]map[string]string)
 var dateIndex []string
+var csvRecords [][]string
 
 func getPattern(fileName string) ([][]string, error) {
 	var pattern [][]string
@@ -41,6 +44,15 @@ func getPattern(fileName string) ([][]string, error) {
 		pattern = append(pattern, pat3)  //append to the output
 	}
 	return pattern, nil
+}
+
+func inSlice(candidate string) bool {
+	for _, element := range states {
+		if element == candidate {
+			return true
+		}
+	}
+	return false
 }
 
 func processItem() {
@@ -60,13 +72,40 @@ func buildDateIndex() {
 		dateIndex = append(dateIndex, key)
 	}
 	sort.Strings(dateIndex)
-	l := len(dateIndex)
-	tmpIndex := make([]string, l)
-	copy(tmpIndex, dateIndex)
-	l = l - 1
-	copy(tmpIndex, dateIndex)
-	for i := range dateIndex {
-		dateIndex[i] = tmpIndex[l-i]
+}
+
+func writeRecords(fileName string, records [][]string) {
+	f, err := os.Create(fileName)
+	if err != nil {
+		fmt.Printf("Failed to create file for writing: %v \n", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+	w := csv.NewWriter(f)
+	defer w.Flush()
+	for _, item := range records {
+		err := w.Write(item)
+		if err != nil {
+			fmt.Printf("Fail on write: %v \n", err)
+		}
+	}
+}
+
+func buildOutputRecords() {
+	var outputLine []string
+	outputLine = append(outputLine, "Date")
+	for _, state := range states {
+		outputLine = append(outputLine, state)
+	}
+	csvRecords = append(csvRecords, outputLine)
+	outputLine = []string{}
+	for _, date := range dateIndex {
+		outputLine = append(outputLine, date)
+		for _, state := range states {
+			outputLine = append(outputLine, interimFile[date][state])
+		}
+		csvRecords = append(csvRecords, outputLine)
+		outputLine = []string{}
 	}
 }
 
@@ -76,7 +115,7 @@ func main() {
 		Timeout: 30 * time.Second,
 	}
 	// Make request
-	response, err := client.Get("https://covidtracking.com/api/states/daily?state=CA")
+	response, err := client.Get("https://covidtracking.com/api/states/daily")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -116,6 +155,7 @@ func main() {
 			outputFileName = item[1]
 		}
 	}
+	// fmt.Println("States:", states)
 
 	pickData.fieldName = "death"
 
@@ -138,6 +178,8 @@ func main() {
 				pickData.date = newItem.ItemValue
 			case "state":
 				pickData.state = newItem.ItemValue
+				pickData.state = strings.TrimPrefix(pickData.state, `"`)
+				pickData.state = strings.TrimSuffix(pickData.state, `"`)
 			case pickData.fieldName:
 				pickData.fieldValue = newItem.ItemValue
 				if newItem.ItemValue == "null" {
@@ -145,7 +187,7 @@ func main() {
 				}
 			}
 		}
-		if !start {
+		if !start && inSlice(pickData.state) {
 			processItem()
 			// fmt.Println(pickData)
 		}
@@ -154,7 +196,8 @@ func main() {
 		}
 	}
 	buildDateIndex()
-
+	buildOutputRecords()
+	writeRecords("../data/"+outputFileName, csvRecords)
 	for _, key := range dateIndex {
 		fmt.Println(key, interimFile[key])
 	}
