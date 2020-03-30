@@ -19,18 +19,22 @@ import (
 	lexer "github.com/Saied74/Lexer2"
 )
 
-var pickData struct {
+//type for picking individual data points
+type pick struct {
 	date       string
 	state      string
 	fieldName  string
 	fieldValue string
 }
+type stateString []string
+type interim map[string]map[string]string
+type csvRecordType [][]string
+type bundle struct {
+	interimFiles interim
+	pickFile     pick
+}
 
-var states []string
 var outputFileName string
-var interimFile = make(map[string]map[string]string)
-var dateIndex []string
-var csvRecords [][]string
 
 func getPattern(fileName string) ([][]string, error) {
 	var pattern [][]string
@@ -46,8 +50,53 @@ func getPattern(fileName string) ([][]string, error) {
 	return pattern, nil
 }
 
-func inSlice(candidate string) bool {
-	for _, element := range states {
+func (b *bundle) lexInputData(pattern [][]string, inputData *string,
+	states stateString) {
+	var start, done bool
+	// b.pickFile.fieldName = "death"
+
+	item := lexer.Lex(pattern, *inputData)
+
+	for {
+		newItem := <-item
+		switch newItem.ItemKey {
+		case "nodeType":
+			start = true
+		case "object":
+			start = false
+		case "EOF":
+			done = true
+		}
+		if start {
+			switch newItem.ItemKey {
+			case "dateChecked":
+				tmpDate := strings.Split(newItem.ItemValue, "T")
+				if len(tmpDate) != 2 {
+					log.Fatal("encounted a badly formatted date", newItem.ItemValue)
+				}
+				b.pickFile.date = tmpDate[0]
+			case "state":
+				b.pickFile.state = newItem.ItemValue
+				b.pickFile.state = strings.TrimPrefix(b.pickFile.state, `"`)
+				b.pickFile.state = strings.TrimSuffix(b.pickFile.state, `"`)
+			case b.pickFile.fieldName:
+				b.pickFile.fieldValue = newItem.ItemValue
+				if newItem.ItemValue == "null" {
+					b.pickFile.fieldValue = ""
+				}
+			}
+		}
+		if !start && states.inSlice(b.pickFile.state) {
+			b.processItem()
+		}
+		if done {
+			break
+		}
+	}
+}
+
+func (s *stateString) inSlice(candidate string) bool {
+	for _, element := range *s {
 		if element == candidate {
 			return true
 		}
@@ -55,23 +104,25 @@ func inSlice(candidate string) bool {
 	return false
 }
 
-func processItem() {
-	_, ok := interimFile[pickData.date]
+func (b *bundle) processItem() {
+	_, ok := b.interimFiles[b.pickFile.date]
 	if ok {
-		interimFile[pickData.date][pickData.state] = pickData.fieldValue
+		b.interimFiles[b.pickFile.date][b.pickFile.state] = b.pickFile.fieldValue
 		return
 	}
-	interimFile[pickData.date] = map[string]string{
-		pickData.state: pickData.fieldValue,
+	b.interimFiles[b.pickFile.date] = map[string]string{
+		b.pickFile.state: b.pickFile.fieldValue,
 	}
 	return
 }
 
-func buildDateIndex() {
-	for key := range interimFile {
+func (b *bundle) buildDateIndex() []string {
+	var dateIndex []string
+	for key := range b.interimFiles {
 		dateIndex = append(dateIndex, key)
 	}
 	sort.Strings(dateIndex)
+	return dateIndex
 }
 
 func writeRecords(fileName string, records [][]string) {
@@ -91,25 +142,32 @@ func writeRecords(fileName string, records [][]string) {
 	}
 }
 
-func buildOutputRecords() {
+func (b *bundle) buildOutputRecords(s stateString, dateIndex []string) *csvRecordType {
+	var csvRecords csvRecordType
 	var outputLine []string
 	outputLine = append(outputLine, "Date")
-	for _, state := range states {
+	for _, state := range s {
 		outputLine = append(outputLine, state)
 	}
 	csvRecords = append(csvRecords, outputLine)
 	outputLine = []string{}
 	for _, date := range dateIndex {
 		outputLine = append(outputLine, date)
-		for _, state := range states {
-			outputLine = append(outputLine, interimFile[date][state])
+		for _, state := range s {
+			outputLine = append(outputLine, b.interimFiles[date][state])
 		}
 		csvRecords = append(csvRecords, outputLine)
 		outputLine = []string{}
 	}
+	return &csvRecords
 }
 
 func main() {
+	// var pickData pick      //for holding individual datapoints
+	var states stateString //for holding the list of states
+	var bundleFiles bundle
+	bundleFiles.interimFiles = make(interim)
+	// var interimFile = make(interim)
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -150,55 +208,17 @@ func main() {
 		case "state":
 			states = item[1:]
 		case "field":
-			pickData.fieldName = item[1]
+			bundleFiles.pickFile.fieldName = item[1]
 		case "file":
 			outputFileName = item[1]
 		}
 	}
-	// fmt.Println("States:", states)
-
-	pickData.fieldName = "death"
-
-	item := lexer.Lex(pattern, buf.String())
-	// var itemKey, itemValue string
-	var start, done bool
-	for {
-		newItem := <-item
-		switch newItem.ItemKey {
-		case "nodeType":
-			start = true
-		case "object":
-			start = false
-		case "EOF":
-			done = true
-		}
-		if start {
-			switch newItem.ItemKey {
-			case "dateChecked":
-				pickData.date = newItem.ItemValue
-			case "state":
-				pickData.state = newItem.ItemValue
-				pickData.state = strings.TrimPrefix(pickData.state, `"`)
-				pickData.state = strings.TrimSuffix(pickData.state, `"`)
-			case pickData.fieldName:
-				pickData.fieldValue = newItem.ItemValue
-				if newItem.ItemValue == "null" {
-					pickData.fieldValue = ""
-				}
-			}
-		}
-		if !start && inSlice(pickData.state) {
-			processItem()
-			// fmt.Println(pickData)
-		}
-		if done {
-			break
-		}
-	}
-	buildDateIndex()
-	buildOutputRecords()
+	inputData := buf.String()
+	bundleFiles.lexInputData(pattern, &inputData, states)
+	dateIndex := bundleFiles.buildDateIndex()
+	csvRecords := *bundleFiles.buildOutputRecords(states, dateIndex)
 	writeRecords("../data/"+outputFileName, csvRecords)
 	for _, key := range dateIndex {
-		fmt.Println(key, interimFile[key])
+		fmt.Println(key, bundleFiles.interimFiles[key])
 	}
 }
