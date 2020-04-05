@@ -16,6 +16,7 @@ type csvRecordType [][]string
 
 var outputFileName string
 
+//writes the csv record to the output file
 func writeRecords(fileName string, records csvRecordType) {
 	f, err := os.Create(fileName)
 	if err != nil {
@@ -33,6 +34,7 @@ func writeRecords(fileName string, records csvRecordType) {
 	}
 }
 
+//structures the data for writing csv records
 func buildOutputRecords(p virusdata.Pick) csvRecordType {
 	var csvRecords csvRecordType
 	var outputLine []string
@@ -83,7 +85,7 @@ func main() {
 			outputFileName = item[1]
 		}
 	}
-	inputData := virusdata.GetData() //buf.String()
+	inputData := virusdata.GetData()
 	pickData.LexInputData(pattern, inputData)
 	pickData.DateList = pickData.BuildDateIndex()
 	csvRecords := buildOutputRecords(pickData)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,13 +11,11 @@ import (
 	"silverslanellc.com/covid/pkg/virusdata"
 )
 
+//the second file generates the data for multiple graphs.  Using the go
+//templates proved to be too complicaated (or impossible)
 var files = []string{
-	"../../ui/html/base.page.tmpl",
-	"../../ui/html/plot.partial.tmpl",
-	// "../ui/html/form.partial.tmpl",
-	// "../ui/html/list.partial.tmpl",
-	// "../ui/html/news.partial.tmpl",
-	// "../ui/html/option.partial.tmpl",
+	"../../ui/html/base.page.tmpl",    //the base (and only) page
+	"../../ui/html/plot.partial.tmpl", //generated JS section for multiple graphs
 }
 
 func (s *StatesType) homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,21 +30,23 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	//set up the data structure to read and lex the input data
 	var pickData virusdata.Pick
 	pickData.InterimFiles = make(virusdata.Interim)
+	//clear thsese variables so the "append" function works rigth
 	s.Xdata = []string{}
 	s.Ydata = [][]string{}
+	s.StateList = []string{}
 
 	err := r.ParseForm() //parse request, handle error
 	if err != nil {
 		log.Println("form did not parse", err)
 	}
 	//pick out the requested graph type and the field
-	graphType := r.Form["graphType"] //graph type
+	graphType := r.Form["graphType"] //pick graph type
 	if len(graphType) == 0 {
 		log.Fatal("Got bad graphType from the web page", graphType) // TODO: get rid of the fatal and also send a message to the screen
 	}
 	s.GraphType = strings.ToLower(graphType[0])
 
-	fieldType := r.Form["fieldType"] //pick the field
+	fieldType := r.Form["fieldType"] //pick the field to be plotted
 	if len(fieldType) == 0 {
 		log.Fatal("Got bad fieldType from the web page", fieldType) // TODO: get rid of the fatal and also send a message to the screen
 	}
@@ -64,14 +63,12 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.StateList = pickData.StateList
-	log.Println("Graph Type: ", s.GraphType)
-	log.Println("Field Type: ", pickData.FieldName)
-	log.Println("States: ", s.StateList)
 
 	//get the JSON file by making the API call
-	inputData := virusdata.GetData() //buf.String()
+	inputData := virusdata.GetData() // TODO: check to see if any data was returned
 
 	//get the pattern for parsing JSON file
+	// TODO: use the same step to populate StateType.Fields
 	pattern, err := virusdata.GetPattern("../../config/pattern.csv")
 	if err != nil {
 		log.Fatal("reading pattern", err)
@@ -89,8 +86,8 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 		s.Ydata = append(s.Ydata, yLine)
 		yLine = []string{}
 	}
-	// log.Println(States.Xdata)
-	fmt.Println(s.Ydata)
+	//build the plot file to be parsed with the other template
+	// TODO: handle exceptions better as discssed elsewhere instead of log.Fatal
 	plot := s.buildPlot()
 	log.Println("Plot: ", plot)
 	f, err := os.Create("../../ui/html/plot.partial.tmpl")
@@ -109,6 +106,10 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	tt.Execute(w, s)
 }
 
+//it proved difficult to create the traces for multiple lines for Plotly
+//using Go template language.  So, I decided to build the file manually
+//with the buildPlot function here.  For the format of this file, you can
+//checkout the Plotly JavaScript webpages.
 func (s *StatesType) buildPlot() string {
 	plot := "{{ define \"plotdata\" }}"
 	for n, state := range s.StateList {

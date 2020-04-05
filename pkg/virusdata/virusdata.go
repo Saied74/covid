@@ -102,6 +102,7 @@ func (p *Pick) LexInputData(pattern [][]string, inputData *string) {
 	}
 }
 
+//After each JSON element is extracted, it appends data to the Interim map
 func (p *Pick) processItem() {
 	_, ok := p.InterimFiles[p.Date]
 	if ok {
