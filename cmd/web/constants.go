@@ -18,15 +18,8 @@ var states = []string{"Alabama", "Alaska", "Arizona", "Arkansas", "California",
 }
 
 var short = []string{"AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-	"HI", "ID", "IL", "IM", "IA", "KS", "KY", "LA", "ME", "MD",
+	"HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
 	"MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
 	"NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
 	"SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-}
-
-// TODO: Extract the fields from the pattern file next
-var fields = []string{"positive", "negative", "pending", "hospitalized",
-	"death", "total", "hash", "dateChecked", "totalTestResults",
-	"flips", "deathIncrease", "hospitalizedIncrease",
-	"positiveIncrease", "totalTestResultsIncrease",
 }

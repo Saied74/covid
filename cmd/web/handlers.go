@@ -19,7 +19,7 @@ var files = []string{
 }
 
 func (s *StatesType) homeHandler(w http.ResponseWriter, r *http.Request) {
-	tt, err := template.ParseFiles(files...)
+	tt, err := template.ParseFiles(s.templateFiles...)
 	if err != nil {
 		log.Fatal("group files did not parse ", err)
 	}
@@ -50,7 +50,7 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	if len(fieldType) == 0 {
 		log.Fatal("Got bad fieldType from the web page", fieldType) // TODO: get rid of the fatal and also send a message to the screen
 	}
-	pickData.FieldName = strings.ToLower(fieldType[0])
+	pickData.FieldName = fieldType[0]
 	s.Selected = fieldType[0]
 
 	//now pick the states requested
@@ -65,16 +65,9 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	s.StateList = pickData.StateList
 
 	//get the JSON file by making the API call
-	inputData := virusdata.GetData() // TODO: check to see if any data was returned
+	inputData := virusdata.GetData(s.covidProjectURL) // TODO: check to see if any data was returned
 
-	//get the pattern for parsing JSON file
-	// TODO: use the same step to populate StateType.Fields
-	pattern, err := virusdata.GetPattern("../../config/pattern.csv")
-	if err != nil {
-		log.Fatal("reading pattern", err)
-	}
-
-	pickData.LexInputData(pattern, inputData)     //lex the input data with the pattern
+	pickData.LexInputData(s.pattern, inputData)   //lex the input data with the pattern
 	pickData.DateList = pickData.BuildDateIndex() //format the dates
 
 	s.Xdata = pickData.DateList
@@ -90,16 +83,16 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: handle exceptions better as discssed elsewhere instead of log.Fatal
 	plot := s.buildPlot()
 	log.Println("Plot: ", plot)
-	f, err := os.Create("../../ui/html/plot.partial.tmpl")
+	f, err := os.Create(s.plotFile)
 	if err != nil {
-		log.Fatal("Could not create ../../ui/html/plot.partial.tmp", err)
+		log.Fatal(s.plotFile, err)
 	}
 	defer f.Close()
 	_, err = f.WriteString(plot)
 	if err != nil {
 		log.Fatal("could not write the plot file", err)
 	}
-	tt, err := template.ParseFiles(files...) //parse html files, handle error
+	tt, err := template.ParseFiles(s.templateFiles...) //parse html files, handle error
 	if err != nil {
 		log.Fatal("group files did not parse ", err)
 	}

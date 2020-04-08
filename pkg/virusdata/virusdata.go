@@ -34,13 +34,13 @@ type Pick struct {
 type Interim map[string]map[string]string
 
 //GetData collects data from the covid tracking website and returns a string
-func GetData() *string {
+func GetData(targetURL string) *string {
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 	// Make request
-	response, err := client.Get("https://covidtracking.com/api/states/daily")
+	response, err := client.Get(targetURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func (p *Pick) LexInputData(pattern [][]string, inputData *string) {
 			case p.FieldName:
 				p.FieldValue = newItem.ItemValue
 				if newItem.ItemValue == "null" {
-					p.FieldValue = ""
+					p.FieldValue = "0"
 				}
 			}
 		}
