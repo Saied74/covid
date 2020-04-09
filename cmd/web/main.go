@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"silverslanellc.com/covid/pkg/virusdata"
 )
@@ -26,8 +26,14 @@ type StatesType struct {
 	covidProjectURL string     //URL for the covid tracking project
 	templateFiles   []string   //names of files to be parsed for the web page
 	plotFile        string     //one of the templateFiles must also be a plot file
+	ipAddress       string     //server ip address and port number
+	errorLog        *log.Logger
+	infoLog         *log.Logger
 }
 
+//getFields estracts the fields to be displayed in the drop down menue on
+//the web page for the field to be plotted.  It ignores date (which is for the
+//horizontal axis and state which is shown on the left side of the screen)
 func (s *StatesType) getFields() {
 	s.Fields = []string{}
 	for _, row := range s.pattern {
@@ -46,7 +52,7 @@ func main() {
 	config := flag.String("c", "config.csv", "Configuratoin file name")
 	//user can provide an environment variable pointing to the directory
 	//containing the configuration file
-	environ := flag.String("e", ".", "Env Variable for Config file location")
+	environ := flag.String("e", "search order", "Env Variable for Config file location")
 	flag.Parse()
 	err = s.setUp(*config, *environ)
 	if err != nil {
@@ -56,13 +62,9 @@ func main() {
 	if err != nil {
 		log.Fatal("configs did not validate ", err)
 	}
-	fmt.Println("App Home:\t", s.appHome)
-	fmt.Println("Pattern File:\t", s.patternFile)
-	fmt.Println("CSV Output File:\t", s.csvOutputFile)
-	fmt.Println("Covid Project URL:\t", s.covidProjectURL)
-	fmt.Println("Template Files:\t", s.templateFiles)
-	fmt.Println("Plot file:\t", s.plotFile)
-	// os.Exit(1)
+
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
 	//get the pattern for parsing JSON file
 	s.pattern, err = virusdata.GetPattern(s.patternFile) //("../../config/pattern.csv")
@@ -72,10 +74,21 @@ func main() {
 	s.getFields()
 	s.State = states
 	s.Short = short
-	// s.Fields = fields // TODO: this will have to come here
+	s.errorLog = errorLog
+	s.infoLog = infoLog
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/home", s.homeHandler)
 	mux.HandleFunc("/generate", s.genHandler)
-	log.Fatal(http.ListenAndServe(":8080", mux))
+
+	srv := &http.Server{
+		Addr:     s.ipAddress,
+		ErrorLog: errorLog,
+		Handler:  mux,
+	}
+
+	infoLog.Printf("Starting server on %s", s.ipAddress)
+
+	err = srv.ListenAndServe()
+	errorLog.Fatal(err)
 }

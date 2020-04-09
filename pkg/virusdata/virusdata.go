@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -34,7 +33,7 @@ type Pick struct {
 type Interim map[string]map[string]string
 
 //GetData collects data from the covid tracking website and returns a string
-func GetData(targetURL string) *string {
+func GetData(targetURL string) (*string, error) {
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -42,23 +41,23 @@ func GetData(targetURL string) *string {
 	// Make request
 	response, err := client.Get(targetURL)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("request api failed to %s with error %v",
+			targetURL, err)
 	}
 	defer response.Body.Close()
 
 	// Copy data from the response to a byte buffer
 	var buf bytes.Buffer
-	n, err := io.Copy(&buf, response.Body)
+	_, err = io.Copy(&buf, response.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Copy into IO buffer failed %v", err)
 	}
-	log.Println("Number of bytes copied to STDOUT:", n)
 	inputData := buf.String()
-	return &inputData
+	return &inputData, nil
 }
 
 //LexInputData parses the JSON file from the website api call
-func (p *Pick) LexInputData(pattern [][]string, inputData *string) {
+func (p *Pick) LexInputData(pattern [][]string, inputData *string) error {
 	var start, done bool
 	// b.pickFile.fieldName = "death"
 
@@ -79,7 +78,7 @@ func (p *Pick) LexInputData(pattern [][]string, inputData *string) {
 			case "dateChecked":
 				tmpDate := strings.Split(newItem.ItemValue, "T")
 				if len(tmpDate) != 2 {
-					log.Fatal("encounted a badly formatted date", newItem.ItemValue)
+					return fmt.Errorf("encounted badly formatted date %v", newItem.ItemValue)
 				}
 				p.Date = strings.TrimPrefix(tmpDate[0], "\"")
 			case "state":
@@ -100,6 +99,7 @@ func (p *Pick) LexInputData(pattern [][]string, inputData *string) {
 			break
 		}
 	}
+	return nil
 }
 
 //After each JSON element is extracted, it appends data to the Interim map

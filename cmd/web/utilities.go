@@ -83,6 +83,8 @@ func (s *StatesType) processConfig(fileName string) error {
 			s.templateFiles = append(s.templateFiles, line[1])
 		case "plotFile":
 			s.plotFile = line[1]
+		case "ipAddress":
+			s.ipAddress = line[1]
 		}
 	}
 	return nil
@@ -116,9 +118,15 @@ func (s *StatesType) validateConfigs() error {
 	if len(s.csvOutputFile) == 0 {
 		return fmt.Errorf("no csvOutputFile was provided in the config file")
 	}
+	if !fileExists(s.patternFile) {
+		return fmt.Errorf("Pattern file %s was not found", s.patternFile)
+	}
 	s.csvOutputFile = s.appHome + "/" + s.csvOutputFile
 	if len(s.covidProjectURL) == 0 {
 		return fmt.Errorf("no covidProjectURL was provided in the config file")
+	}
+	if !fileExists(s.csvOutputFile) {
+		return fmt.Errorf("CSV ouput file %s was not found", s.csvOutputFile)
 	}
 	if !strings.HasPrefix(s.covidProjectURL, "https://") {
 		return fmt.Errorf("malformed covidProjectURL %s", s.covidProjectURL)
@@ -132,7 +140,8 @@ func (s *StatesType) validateConfigs() error {
 		}
 	}
 	if !plotMatch {
-		return fmt.Errorf("plotfile %s was not in the list of template files %v", s.plotFile, s.templateFiles)
+		return fmt.Errorf("plotfile %s was not in the list of template files %v",
+			s.plotFile, s.templateFiles)
 	}
 	s.plotFile = s.appHome + "/" + s.plotFile
 	if len(s.templateFiles) == 0 {
@@ -140,6 +149,12 @@ func (s *StatesType) validateConfigs() error {
 	}
 	for i := range s.templateFiles {
 		s.templateFiles[i] = s.appHome + "/" + s.templateFiles[i]
+		if !fileExists(s.templateFiles[i]) {
+			return fmt.Errorf("template file %s was not found", s.templateFiles[i])
+		}
+	}
+	if len(s.ipAddress) == 0 {
+		return fmt.Errorf("no ip address field was provided in config file")
 	}
 
 	return nil

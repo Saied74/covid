@@ -21,3 +21,6 @@ templateFile|ui/html/plot.partial.tmpl
 
 # one of the templateFiles must also be a plotFile to be used for plotting
 plotFile|ui/html/plot.partial.tmpl
+
+# server ip address
+ipAddress|:8080
