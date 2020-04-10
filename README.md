@@ -28,6 +28,7 @@ or without $ sign.
 
 
 Sample config.csv
+```
 
 # Be careful with typing.  This file controls lots of things
 # All comments look like this
@@ -55,3 +56,4 @@ plotFile|ui/html/plot.partial.tmpl
 
 # server ip address
 ipAddress|:8080
+```
