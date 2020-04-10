@@ -9,6 +9,15 @@ import (
 	"silverslanellc.com/covid/pkg/virusdata"
 )
 
+func (s *StatesType) testHandler(w http.ResponseWriter, r *http.Request) {
+	tt, err := template.ParseFiles(s.templateFiles...)
+	if err != nil {
+		s.serverError(w, err)
+	}
+	panic("oops! something went wrong")
+	tt.Execute(w, s)
+}
+
 func (s *StatesType) homeHandler(w http.ResponseWriter, r *http.Request) {
 	tt, err := template.ParseFiles(s.templateFiles...)
 	if err != nil {

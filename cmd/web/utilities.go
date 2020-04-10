@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"silverslanellc.com/covid/pkg/virusdata"
@@ -92,10 +93,16 @@ func (s *StatesType) processConfig(fileName string) error {
 
 func (s *StatesType) validateConfigs() error {
 	var plotMatch bool //when true, plot file is in the list of templateFiles
+
+	//check for a valid appHome
 	if len(s.appHome) == 0 {
 		return fmt.Errorf("no appHome verable was found in the config file")
 	}
-	if strings.HasPrefix(s.appHome, "$") {
+	//if neither environment variable nor absolute
+	if !strings.HasPrefix(s.appHome, "/") && !strings.HasPrefix(s.appHome, "$") {
+		return fmt.Errorf("malformed appHome in config file %s", s.appHome)
+	}
+	if strings.HasPrefix(s.appHome, "$") { //in case of environment variable
 		appHome := strings.Split(s.appHome, "/")
 		if len(appHome) < 2 {
 			return fmt.Errorf("appHome veriable did not split right, %v", appHome)
@@ -108,29 +115,34 @@ func (s *StatesType) validateConfigs() error {
 		appHome[0] = homeAddr
 		s.appHome = strings.Join(appHome, "/")
 	}
-	if !strings.HasPrefix(s.appHome, "/") || strings.HasPrefix(s.appHome, "$") {
-		return fmt.Errorf("malformed appHome in config file %s", s.appHome)
-	}
+
+	//check the pattern file
 	if len(s.patternFile) == 0 {
 		return fmt.Errorf("no patternFile variable was provided in the config file")
 	}
-	s.patternFile = s.appHome + "/" + s.patternFile
-	if len(s.csvOutputFile) == 0 {
-		return fmt.Errorf("no csvOutputFile was provided in the config file")
-	}
+	s.patternFile = filepath.Join(s.appHome, s.patternFile)
 	if !fileExists(s.patternFile) {
 		return fmt.Errorf("Pattern file %s was not found", s.patternFile)
 	}
-	s.csvOutputFile = s.appHome + "/" + s.csvOutputFile
-	if len(s.covidProjectURL) == 0 {
-		return fmt.Errorf("no covidProjectURL was provided in the config file")
+
+	//ceck the csv output file
+	if len(s.csvOutputFile) == 0 {
+		return fmt.Errorf("no csvOutputFile was provided in the config file")
 	}
+	s.csvOutputFile = filepath.Join(s.appHome, s.csvOutputFile)
 	if !fileExists(s.csvOutputFile) {
 		return fmt.Errorf("CSV ouput file %s was not found", s.csvOutputFile)
+	}
+
+	//check the covid project url
+	if len(s.covidProjectURL) == 0 {
+		return fmt.Errorf("no covidProjectURL was provided in the config file")
 	}
 	if !strings.HasPrefix(s.covidProjectURL, "https://") {
 		return fmt.Errorf("malformed covidProjectURL %s", s.covidProjectURL)
 	}
+
+	//check the plot file, fileExists will be checked later
 	if len(s.plotFile) == 0 {
 		return fmt.Errorf("no plotFile was provided in the config file")
 	}
@@ -143,12 +155,14 @@ func (s *StatesType) validateConfigs() error {
 		return fmt.Errorf("plotfile %s was not in the list of template files %v",
 			s.plotFile, s.templateFiles)
 	}
-	s.plotFile = s.appHome + "/" + s.plotFile
+	s.plotFile = filepath.Join(s.appHome, s.plotFile)
+
+	//check templateFiles
 	if len(s.templateFiles) == 0 {
 		return fmt.Errorf("no templateFiles was provided in the config file")
 	}
 	for i := range s.templateFiles {
-		s.templateFiles[i] = s.appHome + "/" + s.templateFiles[i]
+		s.templateFiles[i] = filepath.Join(s.appHome, s.templateFiles[i])
 		if !fileExists(s.templateFiles[i]) {
 			return fmt.Errorf("template file %s was not found", s.templateFiles[i])
 		}

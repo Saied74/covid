@@ -48,6 +48,10 @@ func (s *StatesType) getFields() {
 func main() {
 	var err error
 	var s StatesType
+
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
 	//user can change the name of the configuration file using this flag
 	config := flag.String("c", "config.csv", "Configuratoin file name")
 	//user can provide an environment variable pointing to the directory
@@ -56,15 +60,12 @@ func main() {
 	flag.Parse()
 	err = s.setUp(*config, *environ)
 	if err != nil {
-		log.Fatal("Did not succeed configuring ", err)
+		errorLog.Fatal("Did not succeed configuring ", err)
 	}
 	err = s.validateConfigs()
 	if err != nil {
-		log.Fatal("configs did not validate ", err)
+		errorLog.Fatal("configs did not validate ", err)
 	}
-
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
 	//get the pattern for parsing JSON file
 	s.pattern, err = virusdata.GetPattern(s.patternFile) //("../../config/pattern.csv")
@@ -79,12 +80,13 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/home", s.homeHandler)
+	mux.HandleFunc("/test", s.testHandler)
 	mux.HandleFunc("/generate", s.genHandler)
 
 	srv := &http.Server{
 		Addr:     s.ipAddress,
 		ErrorLog: errorLog,
-		Handler:  mux,
+		Handler:  s.recoverPanic(s.logRequest(mux)),
 	}
 
 	infoLog.Printf("Starting server on %s", s.ipAddress)
