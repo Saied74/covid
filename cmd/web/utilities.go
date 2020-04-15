@@ -11,6 +11,15 @@ import (
 	"silverslanellc.com/covid/pkg/virusdata"
 )
 
+func inSlice(item string, target []string) bool {
+	for _, item2 := range target {
+		if item == item2 {
+			return true
+		}
+	}
+	return false
+}
+
 func fileExists(f string) bool {
 	info, err := os.Lstat(f)
 	if os.IsNotExist(err) {
@@ -48,7 +57,6 @@ func (s *StatesType) setUp(config string, environ string) error {
 		return fmt.Errorf("no environment variable with name %s was found", environ)
 	}
 	fileName += "/" + config
-	fmt.Println("File name: ", fileName)
 	if fileExists(fileName) {
 		err = s.processConfig(fileName)
 		if err != nil {
@@ -100,6 +108,7 @@ func (s *StatesType) validateConfigs() error {
 	}
 	//if neither environment variable nor absolute
 	if !strings.HasPrefix(s.appHome, "/") && !strings.HasPrefix(s.appHome, "$") {
+		s.appHome = ""
 		return fmt.Errorf("malformed appHome in config file %s", s.appHome)
 	}
 	if strings.HasPrefix(s.appHome, "$") { //in case of environment variable
@@ -157,14 +166,20 @@ func (s *StatesType) validateConfigs() error {
 	}
 	s.plotFile = filepath.Join(s.appHome, s.plotFile)
 
+	if !fileExists(s.plotFile) {
+		plotContent := `{{ define "plotdata" }} {{ end }}`
+		writeFile(s.plotFile, &plotContent)
+	}
+
 	//check templateFiles
 	if len(s.templateFiles) == 0 {
 		return fmt.Errorf("no templateFiles was provided in the config file")
 	}
-	for i := range s.templateFiles {
-		s.templateFiles[i] = filepath.Join(s.appHome, s.templateFiles[i])
-		if !fileExists(s.templateFiles[i]) {
-			return fmt.Errorf("template file %s was not found", s.templateFiles[i])
+	// log.Println("before the range", s.templateFiles)
+	for n, tmp := range s.templateFiles {
+		s.templateFiles[n] = filepath.Join(s.appHome, tmp)
+		if !fileExists(s.templateFiles[n]) {
+			return fmt.Errorf("template file %s was not found", s.templateFiles[n])
 		}
 	}
 	if len(s.ipAddress) == 0 {

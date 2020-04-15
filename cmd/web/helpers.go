@@ -56,15 +56,22 @@ func (s *StatesType) buildPlot() error {
 	plot = strings.TrimSuffix(plot, ", ")
 	plot += "];\n"
 	plot += "{{end}}"
-
-	f, err := os.Create(s.plotFile)
+	err := writeFile(s.plotFile, &plot)
 	if err != nil {
-		return fmt.Errorf("plotFile %s was not created because %v", s.plotFile, err)
+		return fmt.Errorf("writing file %s failed because %v", s.plotFile, err)
+	}
+	return nil
+}
+
+func writeFile(fileName string, content *string) error {
+	f, err := os.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("File %s was not created because %v", fileName, err)
 	}
 	defer f.Close()
-	_, err = f.WriteString(plot)
+	_, err = f.WriteString(*content)
 	if err != nil {
-		return fmt.Errorf("plotFilee was not written beause %v", err)
+		return fmt.Errorf("File %s was not written beause %v", fileName, err)
 	}
 	return nil
 }

@@ -45,12 +45,13 @@ func (s *StatesType) getFields() {
 	}
 }
 
+// TODO: this is not good but it interferes with testability
+var infoLog = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+var errorLog = log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
 func main() {
 	var err error
 	var s StatesType
-
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
 	//user can change the name of the configuration file using this flag
 	config := flag.String("c", "config.csv", "Configuratoin file name")
@@ -80,7 +81,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/home", s.homeHandler)
-	mux.HandleFunc("/test", s.testHandler)
+	// mux.HandleFunc("/test", s.testHandler)
 	mux.HandleFunc("/generate", s.genHandler)
 
 	srv := &http.Server{

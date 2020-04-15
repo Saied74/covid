@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -9,14 +10,15 @@ import (
 	"silverslanellc.com/covid/pkg/virusdata"
 )
 
-func (s *StatesType) testHandler(w http.ResponseWriter, r *http.Request) {
-	tt, err := template.ParseFiles(s.templateFiles...)
-	if err != nil {
-		s.serverError(w, err)
-	}
-	panic("oops! something went wrong")
-	tt.Execute(w, s)
-}
+// func (s *StatesType) testHandler(w http.ResponseWriter, r *http.Request) {
+// 	tt, err := template.ParseFiles(s.templateFiles...)
+// 	if err != nil {
+// 		s.serverError(w, err)
+// 	}
+// 	panic("oops! something went wrong")
+//
+// 	tt.Execute(w, s)
+// }
 
 func (s *StatesType) homeHandler(w http.ResponseWriter, r *http.Request) {
 	tt, err := template.ParseFiles(s.templateFiles...)
@@ -38,17 +40,21 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	//pick out the requested graph type and the field
 	graphType := r.Form["graphType"] //pick graph type
 	if len(graphType) == 0 {
+		s.GraphType = "bar"
 		s.clientError(w, http.StatusBadRequest, "graphType")
 	}
-	s.GraphType = strings.ToLower(graphType[0])
-
+	if len(graphType) != 0 {
+		s.GraphType = strings.ToLower(graphType[0])
+	}
 	fieldType := r.Form["fieldType"] //pick the field to be plotted
 	if len(fieldType) == 0 {
+		s.Selected = "positive"
 		s.clientError(w, http.StatusBadRequest, "fieldType")
 	}
-	pickData.FieldName = fieldType[0]
-	s.Selected = fieldType[0]
-
+	if len(fieldType) != 0 {
+		pickData.FieldName = fieldType[0]
+		s.Selected = fieldType[0]
+	}
 	//now pick the states requested
 	s.StateList = []string{}
 	for i := range s.Short { //Short because that is how the api responds
@@ -60,10 +66,12 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.StateList = pickData.StateList
-
+	if len(s.StateList) == 0 {
+		s.StateList = []string{"NY"}
+	}
 	//get the JSON file by making the API call
 	inputData, err := virusdata.GetData(s.covidProjectURL) // TODO: check to see if any data was returned
-	if err != nil {
+	if err != nil && !strings.HasSuffix(fmt.Sprintf("%v", err), "connection refused") {
 		s.serverError(w, err)
 	}
 
@@ -83,9 +91,11 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	//build the plot file to be parsed with the other template
 	// TODO: handle exceptions better as discssed elsewhere instead of log.Fatal
-	err = s.buildPlot()
-	if err != nil {
-		s.errorLog.Printf("plot file did not build %v", err)
+	if s.plotFile != "" {
+		err = s.buildPlot()
+		if err != nil {
+			s.errorLog.Printf("plot file did not build %v", err)
+		}
 	}
 
 	tt, err := template.ParseFiles(s.templateFiles...) //parse html files, handle error
