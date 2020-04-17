@@ -10,6 +10,8 @@ import (
 	"silverslanellc.com/covid/pkg/virusdata"
 )
 
+//This method that is commented out to keep things safe is for testing the
+//panic recovery middleware.
 // func (s *StatesType) testHandler(w http.ResponseWriter, r *http.Request) {
 // 	tt, err := template.ParseFiles(s.templateFiles...)
 // 	if err != nil {
@@ -21,10 +23,7 @@ import (
 // }
 
 func (s *StatesType) homeHandler(w http.ResponseWriter, r *http.Request) {
-	tt, err := template.ParseFiles(s.templateFiles...)
-	if err != nil {
-		s.serverError(w, err)
-	}
+	tt := template.Must(template.ParseFiles(s.templateFiles...))
 	tt.Execute(w, s)
 }
 
@@ -37,7 +36,7 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.serverError(w, err)
 	}
-	//pick out the requested graph type and the field
+	//pick out the requested graph type and the field; handle exceptions
 	graphType := r.Form["graphType"] //pick graph type
 	if len(graphType) == 0 {
 		s.GraphType = "bar"
@@ -72,12 +71,14 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	//get the JSON file by making the API call
 	inputData, err := virusdata.GetData(s.covidProjectURL) // TODO: check to see if any data was returned
 	if err != nil && !strings.HasSuffix(fmt.Sprintf("%v", err), "connection refused") {
-		s.serverError(w, err)
+		s.errorLog.Fatal("Connection was refused with error", err)
+		// s.serverError(w, err)
 	}
 
-	pickData.LexInputData(s.pattern, inputData)   //lex the input data with the pattern
-	pickData.DateList = pickData.BuildDateIndex() //format the dates
-
+	if inputData != nil {
+		pickData.LexInputData(s.pattern, inputData)   //lex the input data with the pattern
+		pickData.DateList = pickData.BuildDateIndex() //format the dates
+	}
 	s.Xdata = pickData.DateList
 
 	s.Ydata = [][]string{}
@@ -98,9 +99,6 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tt, err := template.ParseFiles(s.templateFiles...) //parse html files, handle error
-	if err != nil {
-		s.serverError(w, err)
-	}
+	tt := template.Must(template.ParseFiles(s.templateFiles...)) //parse html files, handle error
 	tt.Execute(w, s)
 }

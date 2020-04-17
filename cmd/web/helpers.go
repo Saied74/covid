@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -26,6 +28,25 @@ func (s *StatesType) clientError(w http.ResponseWriter, status int, element stri
 
 func (s *StatesType) notFound(w http.ResponseWriter) {
 	s.clientError(w, http.StatusNotFound, "")
+}
+
+//I am building loggers as closurs so there can be only one of each
+//type of logger but used both in the test and in the normal runtime
+//reason for the "out" is of the io.Writer type is so I can use os.Stdout
+//for regular logging and bytes.Buffer for testing
+
+func getInfoLogger(out io.Writer) func() *log.Logger {
+	infoLog := log.New(out, "INFO\t", log.Ldate|log.Ltime)
+	return func() *log.Logger {
+		return infoLog
+	}
+}
+
+func getErrorLogger(out io.Writer) func() *log.Logger {
+	errorLog := log.New(out, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+	return func() *log.Logger {
+		return errorLog
+	}
 }
 
 //it proved difficult to create the traces for multiple lines for Plotly
@@ -63,6 +84,7 @@ func (s *StatesType) buildPlot() error {
 	return nil
 }
 
+//helper function for writing out files.
 func writeFile(fileName string, content *string) error {
 	f, err := os.Create(fileName)
 	if err != nil {

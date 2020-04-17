@@ -1,3 +1,5 @@
+//for information, read the Readme.MD file
+
 package main
 
 import (
@@ -45,13 +47,11 @@ func (s *StatesType) getFields() {
 	}
 }
 
-// TODO: this is not good but it interferes with testability
-var infoLog = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-var errorLog = log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
-
 func main() {
 	var err error
 	var s StatesType
+	infoLog := getInfoLogger(os.Stdout)
+	errorLog := getErrorLogger(os.Stdout)
 
 	//user can change the name of the configuration file using this flag
 	config := flag.String("c", "config.csv", "Configuratoin file name")
@@ -61,11 +61,11 @@ func main() {
 	flag.Parse()
 	err = s.setUp(*config, *environ)
 	if err != nil {
-		errorLog.Fatal("Did not succeed configuring ", err)
+		errorLog().Fatal("Did not succeed configuring ", err)
 	}
 	err = s.validateConfigs()
 	if err != nil {
-		errorLog.Fatal("configs did not validate ", err)
+		errorLog().Fatal("configs did not validate ", err)
 	}
 
 	//get the pattern for parsing JSON file
@@ -76,8 +76,8 @@ func main() {
 	s.getFields()
 	s.State = states
 	s.Short = short
-	s.errorLog = errorLog
-	s.infoLog = infoLog
+	s.errorLog = errorLog()
+	s.infoLog = infoLog()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/home", s.homeHandler)
@@ -86,12 +86,12 @@ func main() {
 
 	srv := &http.Server{
 		Addr:     s.ipAddress,
-		ErrorLog: errorLog,
+		ErrorLog: errorLog(),
 		Handler:  s.recoverPanic(s.logRequest(mux)),
 	}
 
-	infoLog.Printf("Starting server on %s", s.ipAddress)
+	infoLog().Printf("Starting server on %s", s.ipAddress)
 
 	err = srv.ListenAndServe()
-	errorLog.Fatal(err)
+	errorLog().Fatal(err)
 }
