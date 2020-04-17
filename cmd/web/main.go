@@ -85,13 +85,14 @@ func main() {
 	if err != nil {
 		s.errorLog.Fatal("configs did not validate ", err)
 	}
-	s.editStateType(os.Stdout)
-	s.getFields()
 	//get the pattern for parsing JSON file
 	s.pattern, err = virusdata.GetPattern(s.patternFile) //("../../config/pattern.csv")
 	if err != nil {
 		log.Fatal("reading pattern", err)
 	}
+	s.editStateType(os.Stdout)
+	s.getFields()
+
 	mux := s.routes()
 	srv := &http.Server{
 		Addr:     s.ipAddress,
