@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -47,11 +48,28 @@ func (s *StatesType) getFields() {
 	}
 }
 
+//This is pulled out so durng unit testing s struct can be modified.
+func (s *StatesType) editStateType(out io.Writer) {
+	infoLog := getInfoLogger(out)
+	errorLog := getErrorLogger(out)
+	s.State = states
+	s.Short = short
+	s.errorLog = errorLog()
+	s.infoLog = infoLog()
+}
+
+//The same with routes, it is for testability reason
+func (s *StatesType) routes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/home", s.homeHandler)
+	// mux.HandleFunc("/test", s.testHandler)
+	mux.HandleFunc("/generate", s.genHandler)
+	return mux
+}
+
 func main() {
 	var err error
 	var s StatesType
-	infoLog := getInfoLogger(os.Stdout)
-	errorLog := getErrorLogger(os.Stdout)
 
 	//user can change the name of the configuration file using this flag
 	config := flag.String("c", "config.csv", "Configuratoin file name")
@@ -61,37 +79,28 @@ func main() {
 	flag.Parse()
 	err = s.setUp(*config, *environ)
 	if err != nil {
-		errorLog().Fatal("Did not succeed configuring ", err)
+		s.errorLog.Fatal("Did not succeed configuring ", err)
 	}
 	err = s.validateConfigs()
 	if err != nil {
-		errorLog().Fatal("configs did not validate ", err)
+		s.errorLog.Fatal("configs did not validate ", err)
 	}
-
+	s.editStateType(os.Stdout)
+	s.getFields()
 	//get the pattern for parsing JSON file
 	s.pattern, err = virusdata.GetPattern(s.patternFile) //("../../config/pattern.csv")
 	if err != nil {
 		log.Fatal("reading pattern", err)
 	}
-	s.getFields()
-	s.State = states
-	s.Short = short
-	s.errorLog = errorLog()
-	s.infoLog = infoLog()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/home", s.homeHandler)
-	// mux.HandleFunc("/test", s.testHandler)
-	mux.HandleFunc("/generate", s.genHandler)
-
+	mux := s.routes()
 	srv := &http.Server{
 		Addr:     s.ipAddress,
-		ErrorLog: errorLog(),
+		ErrorLog: s.errorLog,
 		Handler:  s.recoverPanic(s.logRequest(mux)),
 	}
 
-	infoLog().Printf("Starting server on %s", s.ipAddress)
+	s.infoLog.Printf("Starting server on %s", s.ipAddress)
 
 	err = srv.ListenAndServe()
-	errorLog().Fatal(err)
+	s.errorLog.Fatal(err)
 }
