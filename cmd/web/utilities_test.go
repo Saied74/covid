@@ -32,7 +32,7 @@ const (
 	noError
 )
 
-var fileOne = `appHome|$HOME/Documents/gocode/src/covid
+var fileOne = `appHome|$GOPATH/src/covid
 # just a comment
 patternFile|config/pattern.csv
 csvOutputFile|config/outreq.csv
@@ -54,7 +54,7 @@ plotFile|
 
 ipAddress|`
 
-var fileThree = `appHome|$HOME/Documents/gocode/src/covid
+var fileThree = `appHome|$GOPATH/src/covid
 patternFile|
 csvOutputFile|config/outreq.csv
 covidProjectURL|
@@ -74,7 +74,7 @@ plotFile|ui/html/plot.partial.tmpl
 ipAddress|`
 
 var resultOne = StatesType{
-	appHome:         "$HOME/Documents/gocode/src/covid",
+	appHome:         "$GOPATH/src/covid",
 	patternFile:     "config/pattern.csv",
 	csvOutputFile:   "config/outreq.csv",
 	covidProjectURL: "https://covidtracking.com/api/states/daily",
@@ -95,7 +95,7 @@ var resultTwo = StatesType{
 }
 
 var resultThree = StatesType{
-	appHome:         "$HOME/Documents/gocode/src/covid",
+	appHome:         "$GOPATH/src/covid",
 	patternFile:     "",
 	csvOutputFile:   "config/outreq.csv",
 	covidProjectURL: "",
@@ -114,7 +114,7 @@ var resultFour = StatesType{
 	ipAddress:       "",
 }
 
-var appDir = "/Users/asadolahseghatoleslami/Documents/gocode/src/covid"
+var appDir = "/$GOPATH/covid"
 
 //using the LICESE file and config directory as test in the ddirectory
 // $GOPATH/covid
@@ -130,7 +130,7 @@ func TestFileExists(t *testing.T) {
 			expect:   true,
 		},
 		{
-			fileName: filepath.Join(dir, "Readme.MD"),
+			fileName: filepath.Join(dir, "README.md"),
 			expect:   true,
 		},
 		{
@@ -327,16 +327,16 @@ func (s *StatesType) matchUp(item *StatesType) error {
 	return nil
 }
 
-var newFileZero = `appHome/Users/asadolahseghatoleslami/Documents`
+var newFileZero = `$GOPATH`
 
-var newFileOne = `appHome|Users/asadolahseghatoleslami/Documents/gocode/src/covid`
+var newFileOne = `appHome|GOPATH/src/covid`
 
-var newFileTwo = `appHome|HOME/Documents/gocode/src/covid`
+var newFileTwo = `appHome|$GOPATH/src/covid`
 
-var newFileThree = `appHome|$HOME/Documents/gocode/src/covid
+var newFileThree = `appHome|$GOPATH/src/covid
 patternFile|config/pattern.csv`
 
-var newFileFour = `appHome|$HOME/Documents/gocode/src/covid
+var newFileFour = `appHome|$GOPATH/src/covid
 # just a comment
 patternFile|config/pattern.csv
 csvOutputFile|config/outreq.csv
@@ -344,7 +344,7 @@ covidProjectURL|https://covidtracking.com/api/states/daily
 templateFile|ui/html/base.page.tmpl
 plotFile|ui/html/base.page.tmpl`
 
-var newFileFive = `appHome|$HOME/Documents/gocode/src/covid
+var newFileFive = `appHome|$GOPATH/src/covid
 # just a comment
 patternFile|config/pattern.csv
 csvOutputFile|config/outreq.csv
@@ -353,7 +353,7 @@ templateFile|ui/html/base.page.tmpl
 templateFile|ui/html/plot.partial.tmpl
 plotFile|ui/html/plot.partial.tmpl`
 
-var newFileSix = `appHome|$HOME/Documents/gocode/src/covid
+var newFileSix = `appHome|$GOPATH/src/covid
 patternFile|config/pattern.csv
 csvOutputFile|config/outreq.csv
 covidProjectURL|https://covidtracking.com/api/states/daily
@@ -382,7 +382,7 @@ var newResult = []StatesType{
 		ipAddress:       "",
 	},
 	StatesType{ //two
-		appHome:         "",
+		appHome:         filepath.Join(os.Getenv("GOPATH"), "/src/covid"),
 		patternFile:     "",
 		csvOutputFile:   "",
 		covidProjectURL: "",
@@ -391,8 +391,8 @@ var newResult = []StatesType{
 		ipAddress:       "",
 	}, //three
 	StatesType{
-		appHome:         "/Users/asadolahseghatoleslami/Documents/gocode/src/covid",
-		patternFile:     "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/pattern.csv",
+		appHome:         filepath.Join(os.Getenv("GOPATH"), "/src/covid"),
+		patternFile:     filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/pattern.csv"),
 		csvOutputFile:   "",
 		covidProjectURL: "",
 		templateFiles:   []string{},
@@ -400,32 +400,32 @@ var newResult = []StatesType{
 		ipAddress:       "",
 	},
 	StatesType{ //four
-		appHome:         "/Users/asadolahseghatoleslami/Documents/gocode/src/covid",
-		patternFile:     "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/pattern.csv",
-		csvOutputFile:   "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/outreq.csv",
+		appHome:         filepath.Join(os.Getenv("GOPATH"), "/src/covid"),
+		patternFile:     filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/pattern.csv"),
+		csvOutputFile:   filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/outreq.csv"),
 		covidProjectURL: "https://covidtracking.com/api/states/daily",
-		templateFiles:   []string{"/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/base.page.tmpl"},
-		plotFile:        "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/base.page.tmpl",
+		templateFiles:   []string{filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/base.page.tmpl")},
+		plotFile:        filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/base.page.tmpl"),
 		ipAddress:       "",
 	},
 	StatesType{ //five
-		appHome:         "/Users/asadolahseghatoleslami/Documents/gocode/src/covid",
-		patternFile:     "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/pattern.csv",
-		csvOutputFile:   "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/outreq.csv",
+		appHome:         filepath.Join(os.Getenv("GOPATH"), "/src/covid"),
+		patternFile:     filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/pattern.csv"),
+		csvOutputFile:   filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/outreq.csv"),
 		covidProjectURL: "https://covidtracking.com/api/states/daily",
-		templateFiles: []string{"/Users/asadolahseghatoleslami/ui/html/base.page.tmpl",
-			"/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/plot.partial.tmpl"},
-		plotFile:  "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/plot.partial.tmpl",
+		templateFiles: []string{filepath.Join(os.Getenv("GOPATH"), "/ui/html/base.page.tmpl"),
+			filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/plot.partial.tmpl")},
+		plotFile:  filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/plot.partial.tmpl"),
 		ipAddress: "",
 	},
 	StatesType{ //six
-		appHome:         "/Users/asadolahseghatoleslami/Documents/gocode/src/covid",
-		patternFile:     "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/pattern.csv",
-		csvOutputFile:   "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/config/outreq.csv",
+		appHome:         filepath.Join(os.Getenv("GOPATH"), "/src/covid"),
+		patternFile:     filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/pattern.csv"),
+		csvOutputFile:   filepath.Join(os.Getenv("GOPATH"), "/src/covid/config/outreq.csv"),
 		covidProjectURL: "https://covidtracking.com/api/states/daily",
-		templateFiles: []string{"/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/base.page.tmpl",
-			"/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/plot.partial.tmpl"},
-		plotFile:  "/Users/asadolahseghatoleslami/Documents/gocode/src/covid/ui/html/plot.partial.tmpl",
+		templateFiles: []string{filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/base.page.tmpl"),
+			filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/plot.partial.tmpl")},
+		plotFile:  filepath.Join(os.Getenv("GOPATH"), "/src/covid/ui/html/plot.partial.tmpl"),
 		ipAddress: ":8080",
 	},
 }
@@ -500,7 +500,7 @@ func TestValidateConfigs(t *testing.T) {
 					t.Errorf("in iteration %d validation error in TestValidateConfigs was %v", n, err)
 				}
 			case 2:
-				if !strings.Contains(errString, "malformed appHome") {
+				if !strings.Contains(errString, "no patternFile") {
 					t.Errorf("in iteration %d validation error in TestValidateConfigs was %v", n, err)
 				}
 			case 3:
