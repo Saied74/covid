@@ -104,10 +104,13 @@ func (s *StatesType) validateConfigs() error {
 
 	//check for a valid appHome
 	if len(s.appHome) == 0 {
-		return fmt.Errorf("no appHome verable was found in the config file")
+		return fmt.Errorf("no appHome variable was found in the config file")
 	}
 	//if neither environment variable nor absolute
-	if !strings.HasPrefix(s.appHome, "/") && !strings.HasPrefix(s.appHome, "$") {
+	validAppHome := strings.HasPrefix(s.appHome, "/") ||
+		strings.HasPrefix(s.appHome, "$") ||
+		strings.HasPrefix(s.appHome, ".")
+	if !validAppHome {
 		s.appHome = ""
 		return fmt.Errorf("malformed appHome in config file %s", s.appHome)
 	}

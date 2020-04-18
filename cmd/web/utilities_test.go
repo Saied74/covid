@@ -120,7 +120,7 @@ var appDir = "/Users/asadolahseghatoleslami/Documents/gocode/src/covid"
 // $GOPATH/covid
 
 func TestFileExists(t *testing.T) {
-	dir := os.Getenv("GOROOT")
+	dir := "../.." //os.Getenv("GOPATH")
 	fileList := []struct {
 		fileName string
 		expect   bool
@@ -257,7 +257,7 @@ func TestSetUp(t *testing.T) {
 		case inENV:
 			{
 				env := "TESTPATH"
-				err = os.Setenv(env, "/Users/asadolahseghatoleslami/Documents")
+				err = os.Setenv(env, "../../")
 				if err != nil {
 					t.Errorf("could not set envrionment variable %s because %v",
 						env, err)

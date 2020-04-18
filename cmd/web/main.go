@@ -77,6 +77,8 @@ func main() {
 	//containing the configuration file
 	environ := flag.String("e", "search order", "Env Variable for Config file location")
 	flag.Parse()
+
+	s.editStateType(os.Stdout)
 	err = s.setUp(*config, *environ)
 	if err != nil {
 		s.errorLog.Fatal("Did not succeed configuring ", err)
@@ -90,7 +92,7 @@ func main() {
 	if err != nil {
 		log.Fatal("reading pattern", err)
 	}
-	s.editStateType(os.Stdout)
+
 	s.getFields()
 
 	mux := s.routes()

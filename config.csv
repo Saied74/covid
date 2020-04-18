@@ -10,7 +10,7 @@
 # The "/" joining addresses is provided by the program
 # Lines can appear in any order, they are processed together
 
-appHome|$HOME/Documents/gocode/src/covid|
+appHome|../..|requires that this file be stored in the root of the application
 patternFile|config/pattern.csv| used to process the JSON data by the lexer
 csvOutputFile|config/outreq.csv| used to select and format the csv output
 covidProjectURL|https://covidtracking.com/api/states/daily
