@@ -9,12 +9,13 @@ import (
 
 func TestEditStateType(t *testing.T) {
 	// var err error
-	var s StatesType
+	var st sT
 	var buff bytes.Buffer
+	st.buildST(&buff)
+	s := st.copyScreenData()
 
-	s.editStateType(&buff)
-	s.errorLog.Printf("foo")
-	s.infoLog.Printf("bar")
+	st.errorLog.Printf("foo")
+	st.infoLog.Printf("bar")
 	content := fmt.Sprintf("%s", &buff)
 
 	passCond := len(s.State) == 50 && len(s.Short) == 50 &&

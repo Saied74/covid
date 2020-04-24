@@ -2,40 +2,26 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-
-	"silverslanellc.com/covid/pkg/virusdata"
 )
 
 func TestHomeHandler(t *testing.T) {
 
-	dummyTmpl := `{{define "plotdata"}}nothing{{end}}`
-	writeFile("../../ui/html/plot.partial.tmpl", &dummyTmpl)
-	defer os.Remove("../../ui/html/plot.partial.tmpl")
-
-	s := StatesType{
-		templateFiles: []string{"../../ui/html/base.page.tmpl",
-			"../../ui/html/plot.partial.tmpl"},
-		plotFile:        "../../ui/html/plot.partial.tmpl",
-		errorLog:        getErrorLogger(os.Stdout)(),
-		infoLog:         getInfoLogger(os.Stdout)(),
-		covidProjectURL: "http://localhost:8090", //https://covidtracking.com/api/states/daily",
-		State:           states,
-		Short:           short,
-	}
+	st := sT{}
+	st.buildST(os.Stdout)
+	st.covidProjectURL = "http://localhost:8080"
 
 	req := httptest.NewRequest("GET", `http:localhost:8080`, nil)
 	w := httptest.NewRecorder()
-	s.homeHandler(w, req)
+	st.homeHandler(w, req)
 
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	passCond := resp.StatusCode == 200 && strings.Contains(string(body), "nothing")
+	passCond := resp.StatusCode == 200 && !strings.Contains(string(body), "block")
 
 	if !passCond {
 		t.Errorf(`expected 200 StatusCode and expected the word nothing in the body
@@ -44,37 +30,19 @@ func TestHomeHandler(t *testing.T) {
 	}
 }
 
-//----------------------TestGenHanlder-------------------------------
+// ----------------------TestGenHanlder-------------------------------
 
 func TestGenHanlder(t *testing.T) {
+
+	st := sT{}
+	st.buildST(os.Stdout)
+	st.covidProjectURL = "http://localhost:8080"
 
 	type genTest struct {
 		genForm   *map[string][]string
 		resCode   int //results from the server
 		contains1 string
 		contains2 string
-	}
-
-	dummyTmpl := `{{define "plotdata"}}nothing{{end}}`
-	writeFile("../../ui/html/plot.partial.tmpl", &dummyTmpl)
-	defer os.Remove("../../ui/html/plot.partial.tmpl")
-
-	pattern, err := virusdata.GetPattern("../../config/pattern.csv")
-	if err != nil {
-		log.Fatal("reading pattern", err)
-	}
-
-	s := StatesType{
-		templateFiles: []string{"../../ui/html/base.page.tmpl",
-			"../../ui/html/plot.partial.tmpl"},
-		plotFile:        "../../ui/html/plot.partial.tmpl",
-		errorLog:        getErrorLogger(os.Stdout)(),
-		infoLog:         getInfoLogger(os.Stdout)(),
-		covidProjectURL: "http://localhost:8090", //https://covidtracking.com/api/states/daily",
-		pattern:         pattern,
-		State:           states,
-		Short:           short,
-		StateList:       []string{},
 	}
 
 	req := httptest.NewRequest("POST", `http://localhost:8080`, nil)
@@ -111,7 +79,7 @@ func TestGenHanlder(t *testing.T) {
 		req.Form = *seq.genForm
 
 		w := httptest.NewRecorder()
-		s.genHandler(w, req)
+		st.genHandler(w, req)
 
 		resp := w.Result()
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -121,7 +89,7 @@ func TestGenHanlder(t *testing.T) {
 			strings.Contains(string(body), seq.contains2)
 			// strings.Contains(string(body), "submit")
 		if passCond {
-			s.infoLog.Printf("passed genHandler test run %d", n)
+			st.infoLog.Printf("passed genHandler test run %d", n)
 		}
 
 		if !passCond {

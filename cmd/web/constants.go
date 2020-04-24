@@ -4,6 +4,17 @@
 
 package main
 
+import (
+	"os"
+	"path/filepath"
+)
+
+var pathvid = os.Getenv("PATHVID")
+var patternFile = filepath.Join(pathvid, "config/pattern.csv")
+var templateFiles = []string{filepath.Join(pathvid, "ui/html/base.page.tmpl")}
+
+// filepath.Join(pathvid, "ui/html/plot.partial.tmpl")}
+
 var states = []string{"Alabama", "Alaska", "Arizona", "Arkansas", "California",
 	"Colorado", "Connecticut", "Delaware", "Florida", "Georgia",
 	"Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas",

@@ -11,7 +11,7 @@ import (
 
 func TestLogRequest(t *testing.T) {
 	var buff bytes.Buffer
-	s := StatesType{
+	st := sT{
 		infoLog: getInfoLogger(&buff)(),
 	}
 	req := httptest.NewRequest("GET", `http://localhost:8080/generate`, nil)
@@ -19,7 +19,7 @@ func TestLogRequest(t *testing.T) {
 
 	testHandle := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	})
-	s.logRequest(testHandle).ServeHTTP(w, req)
+	st.logRequest(testHandle).ServeHTTP(w, req)
 
 	output := fmt.Sprintf("%s", &buff)
 	successCond := strings.Contains(output, "HTTP/1.1 GET /generate") &&
@@ -31,11 +31,11 @@ func TestLogRequest(t *testing.T) {
 
 	//---------------------  Round 2 -------------------------------------
 	var buff2 bytes.Buffer
-	s.infoLog = getInfoLogger(&buff2)()
+	st.infoLog = getInfoLogger(&buff2)()
 
 	req2 := httptest.NewRequest("POST", `http://localhost:8080/home`, nil)
 
-	s.logRequest(testHandle).ServeHTTP(w, req2)
+	st.logRequest(testHandle).ServeHTTP(w, req2)
 
 	output = fmt.Sprintf("%s", &buff2)
 	successCond = strings.Contains(output, "HTTP/1.1 POST /home") &&
@@ -48,7 +48,7 @@ func TestLogRequest(t *testing.T) {
 
 func TestRecoverPanic(t *testing.T) {
 	var buff bytes.Buffer
-	s := StatesType{
+	st := sT{
 		infoLog:  getInfoLogger(&buff)(),
 		errorLog: getErrorLogger(&buff)(),
 	}
@@ -59,7 +59,7 @@ func TestRecoverPanic(t *testing.T) {
 		panic("Oops! something went wrong")
 	})
 
-	s.recoverPanic(testHandle).ServeHTTP(w, req)
+	st.recoverPanic(testHandle).ServeHTTP(w, req)
 	output := fmt.Sprintf("%s", &buff)
 	if !strings.Contains(output, "Oops! something went wrong") {
 		t.Errorf("fail, expected content of Oops! something went wrong got %s",

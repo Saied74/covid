@@ -2,45 +2,38 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"silverslanellc.com/covid/pkg/virusdata"
 )
 
-//This method that is commented out to keep things safe is for testing the
-//panic recovery middleware.
-// func (s *StatesType) testHandler(w http.ResponseWriter, r *http.Request) {
-// 	tt, err := template.ParseFiles(s.templateFiles...)
-// 	if err != nil {
-// 		s.serverError(w, err)
-// 	}
-// 	panic("oops! something went wrong")
-//
-// 	tt.Execute(w, s)
-// }
-
-func (s *StatesType) homeHandler(w http.ResponseWriter, r *http.Request) {
-	tt := template.Must(template.ParseFiles(s.templateFiles...))
-	tt.Execute(w, s)
+func (st *sT) homeHandler(w http.ResponseWriter, r *http.Request) {
+	s := st.copyScreenData()
+	clone, err := st.cache.Clone()
+	if err != nil {
+		st.errorLog.Fatal("cloning error in home handler ", err)
+	}
+	clone.Execute(w, s)
 }
 
-func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
+func (st *sT) genHandler(w http.ResponseWriter, r *http.Request) {
+	s := st.copyScreenData()
 	//set up the data structure to read and lex the input data
 	var pickData virusdata.Pick
 	pickData.InterimFiles = make(virusdata.Interim)
 
 	err := r.ParseForm() //parse request, handle error
 	if err != nil {
-		s.serverError(w, err)
+		st.serverError(w, err)
 	}
 	//pick out the requested graph type and the field; handle exceptions
 	graphType := r.Form["graphType"] //pick graph type
 	if len(graphType) == 0 {
 		s.GraphType = "bar"
-		s.clientError(w, http.StatusBadRequest, "graphType")
+		st.clientError(w, http.StatusBadRequest, "graphType")
 	}
 	if len(graphType) != 0 {
 		s.GraphType = strings.ToLower(graphType[0])
@@ -48,7 +41,7 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 	fieldType := r.Form["fieldType"] //pick the field to be plotted
 	if len(fieldType) == 0 {
 		s.Selected = "positive"
-		s.clientError(w, http.StatusBadRequest, "fieldType")
+		st.clientError(w, http.StatusBadRequest, "fieldType")
 	}
 	if len(fieldType) != 0 {
 		pickData.FieldName = fieldType[0]
@@ -69,14 +62,17 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 		s.StateList = []string{"NY"}
 	}
 	//get the JSON file by making the API call
-	inputData, err := virusdata.GetData(s.covidProjectURL) // TODO: check to see if any data was returned
+	t0 := time.Now()
+	inputData, err := virusdata.GetData(st.covidProjectURL) // TODO: check to see if any data was returned
 	if err != nil && !strings.HasSuffix(fmt.Sprintf("%v", err), "connection refused") {
-		s.errorLog.Fatal("Connection was refused with error", err)
+		st.errorLog.Fatal("Connection was refused with error", err)
 		// s.serverError(w, err)
 	}
+	t1 := time.Now()
+	st.infoLog.Printf("covid api call time %v ", t1.Sub(t0))
 
 	if inputData != nil {
-		pickData.LexInputData(s.pattern, inputData)   //lex the input data with the pattern
+		pickData.LexInputData(st.pattern, inputData)  //lex the input data with the pattern
 		pickData.DateList = pickData.BuildDateIndex() //format the dates
 	}
 	s.Xdata = pickData.DateList
@@ -90,15 +86,16 @@ func (s *StatesType) genHandler(w http.ResponseWriter, r *http.Request) {
 		s.Ydata = append(s.Ydata, yLine)
 		yLine = []string{}
 	}
-	//build the plot file to be parsed with the other template
-	// TODO: handle exceptions better as discssed elsewhere instead of log.Fatal
-	if s.plotFile != "" {
-		err = s.buildPlot()
-		if err != nil {
-			s.errorLog.Printf("plot file did not build %v", err)
-		}
+
+	plot := s.buildPlot()
+	clone, err := st.cache.Clone()
+	if err != nil {
+		st.errorLog.Fatal("cloning error ", err)
+	}
+	ts, err := clone.Parse(*plot)
+	if err != nil {
+		st.errorLog.Printf("plot did not parse because %v ", err)
 	}
 
-	tt := template.Must(template.ParseFiles(s.templateFiles...)) //parse html files, handle error
-	tt.Execute(w, s)
+	ts.Execute(w, s)
 }

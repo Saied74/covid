@@ -7,9 +7,9 @@ import (
 	"net/http"
 )
 
-func (s *StatesType) logRequest(next http.Handler) http.Handler {
+func (st *sT) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.infoLog.Printf("%s - %s %s %s", r.RemoteAddr, r.Proto, r.Method,
+		st.infoLog.Printf("%s - %s %s %s", r.RemoteAddr, r.Proto, r.Method,
 			r.URL.RequestURI())
 
 		next.ServeHTTP(w, r)
@@ -17,7 +17,7 @@ func (s *StatesType) logRequest(next http.Handler) http.Handler {
 	})
 }
 
-func (s *StatesType) recoverPanic(next http.Handler) http.Handler {
+func (st *sT) recoverPanic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		//only runs if there is a panic
@@ -25,7 +25,7 @@ func (s *StatesType) recoverPanic(next http.Handler) http.Handler {
 
 			if err := recover(); err != nil {
 				w.Header().Set("Connection", "Close")
-				s.serverError(w, fmt.Errorf("%s", err))
+				st.serverError(w, fmt.Errorf("%s", err))
 
 			}
 		}()

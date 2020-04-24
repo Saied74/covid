@@ -4,15 +4,15 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"runtime/debug"
 	"strings"
 )
 
-func (s *StatesType) serverError(w http.ResponseWriter, err error) {
+func (s *sT) serverError(w http.ResponseWriter, err error) {
 	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
 	s.errorLog.Println(trace)
 
@@ -20,14 +20,10 @@ func (s *StatesType) serverError(w http.ResponseWriter, err error) {
 		http.StatusInternalServerError)
 }
 
-func (s *StatesType) clientError(w http.ResponseWriter, status int, element string) {
+func (s *sT) clientError(w http.ResponseWriter, status int, element string) {
 	s.errorLog.Printf("%s was not found", element)
 
 	http.Error(w, http.StatusText(status), status)
-}
-
-func (s *StatesType) notFound(w http.ResponseWriter) {
-	s.clientError(w, http.StatusNotFound, "")
 }
 
 //I am building loggers as closurs so there can be only one of each
@@ -53,7 +49,7 @@ func getErrorLogger(out io.Writer) func() *log.Logger {
 //using Go template language.  So, I decided to build the file manually
 //with the buildPlot function here.  For the format of this file, you can
 //checkout the Plotly JavaScript webpages.
-func (s *StatesType) buildPlot() error {
+func (s *ScreenType) buildPlot() *string {
 	plot := "{{ define \"plotdata\" }}"
 	for n, state := range s.StateList {
 		plot += "\nvar " + state + " = {\n  x: ["
@@ -77,23 +73,24 @@ func (s *StatesType) buildPlot() error {
 	plot = strings.TrimSuffix(plot, ", ")
 	plot += "];\n"
 	plot += "{{end}}"
-	err := writeFile(s.plotFile, &plot)
-	if err != nil {
-		return fmt.Errorf("writing file %s failed because %v", s.plotFile, err)
-	}
-	return nil
+
+	return &plot
 }
 
-//helper function for writing out files.
-func writeFile(fileName string, content *string) error {
-	f, err := os.Create(fileName)
+func newTemplateCache(tmpls []string) (*template.Template, error) {
+
+	ts, err := template.ParseFiles(tmpls...)
 	if err != nil {
-		return fmt.Errorf("File %s was not created because %v", fileName, err)
+		return nil, fmt.Errorf("template did not parse in newTemplateCache %v", err)
 	}
-	defer f.Close()
-	_, err = f.WriteString(*content)
-	if err != nil {
-		return fmt.Errorf("File %s was not written beause %v", fileName, err)
-	}
-	return nil
+
+	return ts, nil
+}
+
+func (s *sT) copyScreenData() *ScreenType {
+	var sst = ScreenType{}
+	sst.State = s.state
+	sst.Short = s.short
+	sst.Fields = s.fields
+	return &sst
 }

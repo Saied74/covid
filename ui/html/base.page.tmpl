@@ -77,7 +77,7 @@
 </body>
 <script>
 
-{{ template "plotdata" . }}
+{{ block "plotdata" . }} {{end}}
 var layout = {
   title: "Results for {{.Selected}}",
   font: {size: 18}
